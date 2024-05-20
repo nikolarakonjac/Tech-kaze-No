@@ -21,7 +21,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.requiredWidth
@@ -32,7 +31,6 @@ import androidx.compose.material.BottomNavigationItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -46,20 +44,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 
-class MainActivity : ComponentActivity() {
-
+class NovaAktivnost: ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     companion object {
@@ -71,14 +64,14 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this) // Initialize here
         setContent {
             MyApplicationTheme {
-                // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Greeting()
+                    Fja()
                 }
             }
         }
@@ -98,12 +91,11 @@ class MainActivity : ComponentActivity() {
                 getLocationAndSendSMS()
             } else {
                 // Permission denied, show an explanation to the user
-                // You can show different explanations based on the permission requested
                 if (permissions.contains(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                    //
+                    Toast.makeText(this, "Location permission is required for this feature", Toast.LENGTH_SHORT).show()
                 }
                 if (permissions.contains(Manifest.permission.CAMERA)) {
-                    // Handle camera permission denial
+                    Toast.makeText(this, "Camera permission is required for this feature", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -114,12 +106,9 @@ class MainActivity : ComponentActivity() {
             fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
                 if (location != null) {
                     val message = "Location: https://www.google.com/maps?q=${location.latitude},${location.longitude}"
-                    // Request CAMERA permission
-                    ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_LOCATION_PERMISSION)
-                    // Send SMS and turn on the camera
                     sendSMSAndStartVideoRecording(this, "+381628394356", message)
                 } else {
-                    // Handle case where location is null
+                    Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show()
                 }
             }
         } else {
@@ -127,30 +116,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-
-
-
-
     private fun sendSMSAndStartVideoRecording(context: Context, phoneNumber: String, message: String) {
         try {
             val smsManager: SmsManager = SmsManager.getDefault()
             smsManager.sendTextMessage(phoneNumber, null, message, null, null)
-            // Start video recording
             val intent = Intent(MediaStore.ACTION_VIDEO_CAPTURE)
             context.startActivity(intent)
-            // Optionally, show a Toast or some other indication that the SMS was sent and video recording started
             Toast.makeText(context, "SMS Sent and Video Recording Started", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             e.printStackTrace()
-            // Optionally, show a Toast or some other indication that the SMS failed
             Toast.makeText(context, "SMS and video Failed", Toast.LENGTH_SHORT).show()
         }
     }
-
-
-    // dodavanje samo slanja sms-a sa lokacijom i porukom
-
-
 
     public fun justSendSMS() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -159,7 +136,6 @@ class MainActivity : ComponentActivity() {
                     val message = "Help needed! Location: https://www.google.com/maps?q=${location.latitude},${location.longitude}"
                     sendSMS(this, "+381628394356", message)
                 } else {
-                    // Handle case where location is null
                     Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -172,45 +148,12 @@ class MainActivity : ComponentActivity() {
         try {
             val smsManager: SmsManager = SmsManager.getDefault()
             smsManager.sendTextMessage(phoneNumber, null, message, null, null)
-            // Optionally, show a Toast or some other indication that the SMS was sent
             Toast.makeText(context, "SMS Sent", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             e.printStackTrace()
-            // Optionally, show a Toast or some other indication that the SMS failed
             Toast.makeText(context, "SMS Failed", Toast.LENGTH_SHORT).show()
         }
     }
-
-
-//    fun justSendSMS() {
-//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-//            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-//                if (location != null) {
-//                    val message = "Location: https://www.google.com/maps?q=${location.latitude},${location.longitude}"
-//                    sendSMS(this, "+381628394356", message)
-//                } else {
-//                    // Handle case where location is null
-//                }
-//            }
-//        } else {
-//            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION_PERMISSION)
-//        }
-//    }
-
-//    private fun sendSMS(context: Context, phoneNumber: String, message: String) {
-//        try {
-//            val smsManager: SmsManager = SmsManager.getDefault()
-//            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
-//            // Optionally, show a Toast or some other indication that the SMS was sent
-//            Toast.makeText(context, "SMS Sent", Toast.LENGTH_SHORT).show()
-//        } catch (e: Exception) {
-//            e.printStackTrace()
-//            // Optionally, show a Toast or some other indication that the SMS failed
-//            Toast.makeText(context, "SMS Failed", Toast.LENGTH_SHORT).show()
-//        }
-//    }
-
-    // kraj dodavanja slanja samo sms-a
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -219,7 +162,7 @@ class MainActivity : ComponentActivity() {
             results?.firstOrNull()?.let { result ->
                 if (result.contains("help", ignoreCase = true)) {
                     getLocationAndSendSMS()
-                    sendSMSAndStartVideoRecording(this, "+381628394356", "Help needed! "  )
+                    sendSMSAndStartVideoRecording(this, "+381628394356", "Help needed!")
                 }
             }
         }
@@ -229,7 +172,8 @@ class MainActivity : ComponentActivity() {
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun Greeting(modifier: Modifier = Modifier) {
+fun Fja(modifier: Modifier = Modifier){
+
     val context = LocalContext.current
 
 
@@ -269,10 +213,10 @@ fun Greeting(modifier: Modifier = Modifier) {
                             ActivityCompat.requestPermissions(
                                 context as Activity,
                                 arrayOf(Manifest.permission.SEND_SMS),
-                                MainActivity.REQUEST_SEND_SMS
+                                NovaAktivnost.REQUEST_SEND_SMS
                             )
                         } else {
-                            (context as MainActivity).startVoiceRecognition()
+                            (context as NovaAktivnost).startVoiceRecognition()
                         }
                     }
             ) {
@@ -321,7 +265,8 @@ fun Greeting(modifier: Modifier = Modifier) {
                     textAlign = TextAlign.Center,
                     style = TextStyle(
                         fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold))
+                        fontWeight = FontWeight.Bold)
+                )
             }
             Box(
                 modifier = Modifier
@@ -346,10 +291,10 @@ fun Greeting(modifier: Modifier = Modifier) {
                                 ActivityCompat.requestPermissions(
                                     context as Activity,
                                     arrayOf(Manifest.permission.SEND_SMS),
-                                    MainActivity.REQUEST_SEND_SMS
+                                    NovaAktivnost.REQUEST_SEND_SMS
                                 )
                             } else {
-                                (context as MainActivity).justSendSMS()
+                                (context as NovaAktivnost).justSendSMS()
                             }
                         }
                     //OVDE TREBA DODATI SAMO SLANJE PORUKE I LOKACIJE
@@ -422,7 +367,8 @@ fun Greeting(modifier: Modifier = Modifier) {
                     textAlign = TextAlign.Center,
                     style = TextStyle(
                         fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold))
+                        fontWeight = FontWeight.Bold)
+                )
                 Text(
                     text = "Press the button below help will\nreach you soon.",
                     color = Color(0xff2f2f2f).copy(alpha = 0.4f),
@@ -507,7 +453,8 @@ fun Greeting(modifier: Modifier = Modifier) {
                             textAlign = TextAlign.Center,
                             style = TextStyle(
                                 fontSize = 30.sp,
-                                fontWeight = FontWeight.Bold))
+                                fontWeight = FontWeight.Bold)
+                        )
                     },
                     modifier = Modifier
                         .align(alignment = Alignment.TopStart)
@@ -542,6 +489,7 @@ fun Greeting(modifier: Modifier = Modifier) {
                     )
                 },
 
+
                 selected = false,
                 onClick = { /* Handle item 2 click */ }
             )
@@ -561,4 +509,3 @@ fun Greeting(modifier: Modifier = Modifier) {
 
 
 }
-
