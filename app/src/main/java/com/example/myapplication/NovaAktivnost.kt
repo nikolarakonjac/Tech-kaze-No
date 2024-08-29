@@ -58,13 +58,14 @@ class NovaAktivnost: ComponentActivity() {
     companion object {
         const val REQUEST_SEND_SMS = 1
         const val REQUEST_LOCATION_PERMISSION = 2
-        const val REQUEST_VOICE_RECOGNITION = 3
+        const val REQUEST_CAMERA_PERMISSION = 3
+        const val REQUEST_VOICE_RECOGNITION = 4
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this) // Initialize here
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setContent {
             MyApplicationTheme {
                 Surface(
@@ -86,16 +87,23 @@ class NovaAktivnost: ComponentActivity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_SEND_SMS || requestCode == REQUEST_LOCATION_PERMISSION) {
+        if (requestCode == REQUEST_SEND_SMS || requestCode == REQUEST_LOCATION_PERMISSION || requestCode == REQUEST_CAMERA_PERMISSION) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 getLocationAndSendSMS()
             } else {
-                // Permission denied, show an explanation to the user
-                if (permissions.contains(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                    Toast.makeText(this, "Location permission is required for this feature", Toast.LENGTH_SHORT).show()
-                }
-                if (permissions.contains(Manifest.permission.CAMERA)) {
-                    Toast.makeText(this, "Camera permission is required for this feature", Toast.LENGTH_SHORT).show()
+                // Permission denied
+                permissions.forEach { permission ->
+                    when (permission) {
+                        Manifest.permission.ACCESS_FINE_LOCATION -> {
+                            Toast.makeText(this, "Location permission is required for this feature", Toast.LENGTH_SHORT).show()
+                        }
+                        Manifest.permission.SEND_SMS -> {
+                            Toast.makeText(this, "SMS permission is required for this feature", Toast.LENGTH_SHORT).show()
+                        }
+                        Manifest.permission.CAMERA -> {
+                            Toast.makeText(this, "Camera permission is required for this feature", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 }
             }
         }
@@ -106,7 +114,7 @@ class NovaAktivnost: ComponentActivity() {
             fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
                 if (location != null) {
                     val message = "Location: https://www.google.com/maps?q=${location.latitude},${location.longitude}"
-                    sendSMSAndStartVideoRecording(this, "+381628394356", message)
+                    sendSMSAndStartVideoRecording(this, "+381646743689", message)
                 } else {
                     Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show()
                 }
@@ -117,41 +125,63 @@ class NovaAktivnost: ComponentActivity() {
     }
 
     private fun sendSMSAndStartVideoRecording(context: Context, phoneNumber: String, message: String) {
-        try {
-            val smsManager: SmsManager = SmsManager.getDefault()
-            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
-            val intent = Intent(MediaStore.ACTION_VIDEO_CAPTURE)
-            context.startActivity(intent)
-            Toast.makeText(context, "SMS Sent and Video Recording Started", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(context, "SMS and video Failed", Toast.LENGTH_SHORT).show()
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.SEND_SMS), REQUEST_SEND_SMS)
+        } else if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA_PERMISSION)
+        } else {
+            try {
+                val smsManager: SmsManager = SmsManager.getDefault()
+                smsManager.sendTextMessage(phoneNumber, null, message, null, null)
+                val intent = Intent(MediaStore.ACTION_VIDEO_CAPTURE)
+                context.startActivity(intent)
+                Toast.makeText(context, "SMS Sent and Video Recording Started", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Toast.makeText(context, "SMS and Video Failed", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    public fun justSendSMS() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+    fun justSendSms() {
+        // Check if coarse location permission is granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
             fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
                 if (location != null) {
-                    val message = "Help needed! Location: https://www.google.com/maps?q=${location.latitude},${location.longitude}"
-                    sendSMS(this, "+381628394356", message)
+                    val message = "Help needed. Location: https://www.google.com/maps?q=${location.latitude},${location.longitude}"
+
+                    // Check if SMS permission is granted
+                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.SEND_SMS),
+                            NovaAktivnost.REQUEST_SEND_SMS
+                        )
+                    } else {
+                        sendSms(message)
+                    }
                 } else {
                     Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show()
                 }
+            }.addOnFailureListener {
+                Toast.makeText(this, "Failed to get location", Toast.LENGTH_SHORT).show()
             }
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION_PERMISSION)
+            // Request location permissions if not granted
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION),
+                NovaAktivnost.REQUEST_LOCATION_PERMISSION
+            )
         }
     }
 
-    public fun sendSMS(context: Context, phoneNumber: String, message: String) {
+    private fun sendSms(message: String) {
         try {
             val smsManager: SmsManager = SmsManager.getDefault()
-            smsManager.sendTextMessage(phoneNumber, null, message, null, null)
-            Toast.makeText(context, "SMS Sent", Toast.LENGTH_SHORT).show()
+            smsManager.sendTextMessage("+381646743689", null, message, null, null)
+            Toast.makeText(this, "SMS Sent", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(context, "SMS Failed", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "SMS Failed", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -162,7 +192,7 @@ class NovaAktivnost: ComponentActivity() {
             results?.firstOrNull()?.let { result ->
                 if (result.contains("help", ignoreCase = true)) {
                     getLocationAndSendSMS()
-                    sendSMSAndStartVideoRecording(this, "+381628394356", "Help needed!")
+                    Toast.makeText(this, "Help command recognized", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -175,10 +205,6 @@ class NovaAktivnost: ComponentActivity() {
 fun Fja(modifier: Modifier = Modifier){
 
     val context = LocalContext.current
-
-
-
-
 
     Box(
         modifier = Modifier
@@ -195,7 +221,7 @@ fun Fja(modifier: Modifier = Modifier){
                 .background(color = Color(0xfffcfbff))
         ) {
             Box(
-                //krajnji box za mikrofon
+                // MIKROFON DEO -> SOS JE DOLE
                 modifier = Modifier
                     .align(alignment = Alignment.TopStart)
                     .offset(
@@ -294,7 +320,8 @@ fun Fja(modifier: Modifier = Modifier){
                                     NovaAktivnost.REQUEST_SEND_SMS
                                 )
                             } else {
-                                (context as NovaAktivnost).justSendSMS()
+                                (context as NovaAktivnost).justSendSms()
+                                //ovde treba samo sms
                             }
                         }
                     //OVDE TREBA DODATI SAMO SLANJE PORUKE I LOKACIJE
